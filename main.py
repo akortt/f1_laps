@@ -37,22 +37,30 @@ def get_correct_race():
         except requests.exceptions.HTTPError:
             print(f"HTTP error: {response.status_code} - {response.reason}. Please check your input and try again.")
         except Exception as e:
-            print(f"An error occured: {e}. Please try again.")
+            print(f"An error occurred: {e}. Please try again.")
 
 
 def get_drivers_info(session_key):
-    response = requests.get(f'https://api.openf1.org/v1/drivers?session_key={session_key}')
-    driver_info = response.json() 
+    try:
+        response = requests.get(f"https://api.openf1.org/v1/drivers?session_key={session_key}")
+        response.raise_for_status() # Raise HTTP error - only really a safeguard.  
+        driver_info = response.json()
 
-    drivers = []
-    for driver in driver_info:
-        drivers.append({
-            "driver_number": driver.get("driver_number"), # GET is used instead of [] for safety
-            "name": driver.get("full_name"),
-            "team_colour": f"#{driver.get('team_colour')}"  # API returns hex without #
-        })
-    # print(drivers)
-    return drivers
+        drivers = []
+
+        for driver in driver_info:
+            drivers.append({
+                "driver_number": driver.get("driver_number"),
+                "name": driver.get("full_name"),
+                "team_colour": f"#{driver.get('team_colour')}" # API returns hex without #
+            })
+        # print(drivers)
+        return drivers
+
+    except requests.exceptions.HTTPError:
+        print(f"HTTP error fetching drivers: {response.status_code} - {response.reason}")
+    except Exception as e:
+        print(f"Error Fetching drivers: {e}")
 
 
 def get_lap_times(session_key, drivers):
@@ -61,7 +69,7 @@ def get_lap_times(session_key, drivers):
     for driver in drivers:
         driver_number = driver["driver_number"] # This accesses the individual numbers within the List
 
-        try: # The TRY block will co
+        try: 
             response = requests.get(
                 "https://api.openf1.org/v1/laps",
                 params={
@@ -69,12 +77,12 @@ def get_lap_times(session_key, drivers):
                     "driver_number": driver_number,
                     }
             )
-            response.raise_for_status # Raise HTTP error - only really a safeguard.  
+            response.raise_for_status()
             laps = response.json() #Stores JSON info into a temporary list called laps.
 
             lap_times = []
             for lap in laps:
-                time = lap.get["lap_duration"]
+                time = lap.get("lap_duration")
                 lap_times.append(time)
 
             # This extracts the lap duration for each lap, preserving the lap order
@@ -84,7 +92,6 @@ def get_lap_times(session_key, drivers):
 
             lap_data[driver_number] = {
                 "name": driver["name"],
-                "team_colour": driver["team_colour"],
                 "lap_times": lap_times,
             }
             # Will attempt to use the driver_numbers as a key as this is what the API uses to filter parameter and is unique to per drivers
@@ -96,9 +103,12 @@ def get_lap_times(session_key, drivers):
     # Seeing Data: 
     # print(lap_data)
 
+# def visualise_data(SESSION_KEY, DRIVERS,LAP_TIMES):
+
 SESSION_KEY = get_correct_race()
 DRIVERS = get_drivers_info(SESSION_KEY)
 LAP_TIMES = get_lap_times(SESSION_KEY, DRIVERS)
+# VISUALISATION = visualise_data(SESSION_KEY, DRIVERS, LAP_TIMES)
 
 
 
