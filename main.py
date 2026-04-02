@@ -26,7 +26,7 @@ def get_correct_race():
                 print(f"No session found for {country} Grand Prix in {year} during {session_type}. Please try again.")
                 continue # Reiterate function and skip rest of the code.
             
-            print(data)
+            # print(data)
             session = data[0] # As this only returns one session, we know it will be the first in the list.
             session_key = session['session_key']
             print(f"\nFound: {session['country_name']} {session['year']} — {session['session_type']} | Session Key: {session_key}")
@@ -40,7 +40,7 @@ def get_correct_race():
             print(f"An error occured: {e}. Please try again.")
 
 
-def get_drivers(session_key):
+def get_drivers_info(session_key):
     response = requests.get(f'https://api.openf1.org/v1/drivers?session_key={session_key}')
     driver_info = response.json() 
 
@@ -51,19 +51,54 @@ def get_drivers(session_key):
             "name": driver.get("full_name"),
             "team_colour": f"#{driver.get('team_colour')}"  # API returns hex without #
         })
+    # print(drivers)
     return drivers
 
 
-def get_lap_times(session_key):
+def get_lap_times(session_key, drivers):
+    lap_data = {}
+
+    for driver in drivers:
+        driver_number = driver["driver_number"] # This accesses the individual numbers within the List
+
+        try: # The TRY block will co
+            response = requests.get(
+                "https://api.openf1.org/v1/laps",
+                params={
+                    "session_key": session_key,
+                    "driver_number": driver_number,
+                    }
+            )
+            response.raise_for_status # Raise HTTP error - only really a safeguard.  
+            laps = response.json() #Stores JSON info into a temporary list called laps.
+
+            lap_times = []
+            for lap in laps:
+                time = lap.get["lap_duration"]
+                lap_times.append(time)
+
+            # This extracts the lap duration for each lap, preserving the lap order
+            # Some laps may have None (e.g. Pit Laps or Safety) - but we keep them so that lap_number still maps to the correct index later. 
+            # Also using the .get() function is safer if it does not return correct Key. 
+            # lap_times = [lap.get("lap_duration") for lap in laps] ~ could have used this instead. 
+
+            lap_data[driver_number] = {
+                "name": driver["name"],
+                "team_colour": driver["team_colour"],
+                "lap_times": lap_times,
+            }
+            # Will attempt to use the driver_numbers as a key as this is what the API uses to filter parameter and is unique to per drivers
+        
+        except Exception as e:
+            print(f"Error for driver {driver_number}: {e}")
     
-    response = requests.get(f"")
-
-
+    return lap_data
+    # Seeing Data: 
+    # print(lap_data)
 
 SESSION_KEY = get_correct_race()
-DRIVERS = get_drivers(SESSION_KEY)
-LAP_TIMES = get_lap_times(SESSION_KEY)
-
+DRIVERS = get_drivers_info(SESSION_KEY)
+LAP_TIMES = get_lap_times(SESSION_KEY, DRIVERS)
 
 
 
