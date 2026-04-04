@@ -1,14 +1,17 @@
 import requests
-import json 
-import plotly.graph_objects 
+import plotly.graph_objects as go
 
 
 # Obtaining Correct Data from API
 def get_correct_race():
     while True:
-        country = input("Which Grand Prix would you like to see? (e.g. Australian, Monaco, etc.) ")
-        year = input("Which year would you like to see? (e.g. 2025) ")
-        session_type = input("Which session would you like to see? (e.g. Qualifying, Race, etc.) ")    
+        try: 
+            country = input("Which Grand Prix would you like to see? (e.g. Australia, Monaco, etc.) ")
+            year = input("Which year would you like to see? (e.g. 2025) ")
+            session_type = input("Which session would you like to see? (e.g. Qualifying, Race, etc.) ")    
+        except EOFError:
+            print("Input Error: Unexpected end of input. Please try again.")
+            break
 
         try:
             response = requests.get(
@@ -36,6 +39,7 @@ def get_correct_race():
             print("Network error: Unable to connect to the API. Please check your internet connection and try again.")
         except requests.exceptions.HTTPError:
             print(f"HTTP error: {response.status_code} - {response.reason}. Please check your input and try again.")
+            print("Make sure to input the country name, year, and session type correctly (e.g. Australia, 2025, Qualifying).")
         except Exception as e:
             print(f"An error occurred: {e}. Please try again.")
 
@@ -103,12 +107,68 @@ def get_lap_times(session_key, drivers):
     # Seeing Data: 
     # print(lap_data)
 
-# def visualise_data(SESSION_KEY, DRIVERS,LAP_TIMES):
+def visualise_data(drivers, lap_data): 
+    fig = go.Figure()
 
-SESSION_KEY = get_correct_race()
-DRIVERS = get_drivers_info(SESSION_KEY)
-LAP_TIMES = get_lap_times(SESSION_KEY, DRIVERS)
-# VISUALISATION = visualise_data(SESSION_KEY, DRIVERS, LAP_TIMES)
+    colour_map = {d["driver_number"]: d["team_colour"] for d in drivers}
+
+    for driver_number, info in lap_data.items():
+        colour = colour_map.get(driver_number, "#FFFFFF")
+
+        # Filter None laps while keeping the real lap number
+        valid_laps = [
+            (i + 1, t)
+            for i, t in enumerate(info["lap_times"])
+            if t is not None
+        ]
+
+        if not valid_laps:
+            continue
+
+        x_laps, y_times = zip(*valid_laps)
+
+        fig.add_trace(go.Scatter(
+            x=list(x_laps),
+            y=list(y_times),
+            mode="lines+markers",
+            name=info["name"],
+            line=dict(color=colour, width=2),
+            marker=dict(size=4),
+            hovertemplate=(
+                f"<b>{info['name']}</b><br>"
+                "Lap %{x}<br>"
+                "Time: %{y:.3f}s<br>"
+                "<extra></extra>"
+            )
+        ))
+
+    fig.update_layout(
+        title="Lap Times for Each Driver",
+        xaxis_title="Lap Number",
+        yaxis_title="Lap Time (seconds)",
+        legend_title="Drivers",
+        hovermode="closest",
+        template="plotly_dark"
+    )
+
+    fig.show()
 
 
+# -- Main -- 
+def main():
+    SESSION_KEY = get_correct_race()
+    if SESSION_KEY is None:
+        print("No valid session key was obtained. Exiting the program.")
+        return
+
+    DRIVERS = get_drivers_info(SESSION_KEY)
+    if DRIVERS is None:
+        print("No driver information was obtained. Exiting the program.")
+        return
+    
+    LAP_TIMES = get_lap_times(SESSION_KEY, DRIVERS)
+    visualise_data(DRIVERS, LAP_TIMES)
+
+if __name__ == "__main__":
+    main()
 
