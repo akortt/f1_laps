@@ -27,7 +27,7 @@ def get_correct_race():
 
             if not data:
                 print(f"No session found for {country} Grand Prix in {year} during {session_type}. Please try again.")
-                continue # Reiterate function and skip rest of the code.
+                continue 
             
             # print(data)
             session = data[0] # As this only returns one session, we know it will be the first in the list.
@@ -71,7 +71,7 @@ def get_lap_times(session_key, drivers):
     lap_data = {}
 
     for driver in drivers:
-        driver_number = driver["driver_number"] # This accesses the individual numbers within the List
+        driver_number = driver["driver_number"] 
 
         try: 
             response = requests.get(
@@ -82,7 +82,7 @@ def get_lap_times(session_key, drivers):
                     }
             )
             response.raise_for_status()
-            laps = response.json() #Stores JSON info into a temporary list called laps.
+            laps = response.json() 
 
             lap_times = []
             for lap in laps:
@@ -115,7 +115,6 @@ def visualise_data(drivers, lap_data):
     for driver_number, info in lap_data.items():
         colour = colour_map.get(driver_number, "#FFFFFF")
 
-        # Filter None laps while keeping the real lap number
         valid_laps = [
             (i + 1, t)
             for i, t in enumerate(info["lap_times"])
